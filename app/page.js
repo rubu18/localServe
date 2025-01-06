@@ -1,101 +1,72 @@
-import Image from "next/image";
+"use client";
+import Header from './_components/Header';
+import Hero from './_components/Hero';
+import CategoryList from './_components/CategoryList'; 
+// import { getCategory, getAllBusinessList } from '@/_services/GlobalApi';  // Named imports
+import { getCategory, getAllBusinessList } from './_services/GlobalApi';
+import { useEffect, useState } from 'react';
+import BusinessList from './_components/BusinessList';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              app/page.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    const [categoryList, setCategoryList] = useState([]);
+    const [businessLists, setBusinessList] = useState([]);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    // Fetch categories
+    useEffect(() => {
+        const getCategoryList = async () => {
+            try {
+                const resp = await getCategory();  // Fetch categories from GlobalApi
+                console.log("Full API response:", JSON.stringify(resp, null, 2)); 
+
+                if (resp && Array.isArray(resp)) {
+                    setCategoryList(resp); 
+                    console.log("Fetched categories:", resp); 
+                } else {
+                    console.warn("No categories found in the API response");
+                    setCategoryList([]); 
+                }
+            } catch (error) {
+                console.error("Error fetching category list:", error);
+                setCategoryList([]); 
+            }
+        };
+
+        getCategoryList();
+    }, []);
+
+    // Fetch business list
+    useEffect(() => {
+        const getAllBusinessListData = async () => {
+            try {
+                const resp = await getAllBusinessList();  // Fetch business lists
+                console.log("Business List Response:", resp);
+
+                if (resp && Array.isArray(resp)) {
+                    console.log("Business Lists:", resp);
+                    setBusinessList(resp); // Set business list state directly
+                } else {
+                    console.warn("No valid business lists found in the API response");
+                    setBusinessList([]); 
+                }
+            } catch (error) {
+                console.error("Error fetching business list:", error);
+                setBusinessList([]);
+            }
+        };
+
+        getAllBusinessListData(); 
+    }, []);
+
+    return (
+        <div>
+            <Header />
+            <Hero />
+            {Array.isArray(categoryList) && categoryList.length > 0 ? (
+                <CategoryList categoryList={categoryList} />
+            ) : (
+                <p>Loading categories...</p> 
+            )}
+            <BusinessList businessLists={businessLists} title="Popular Business" />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
