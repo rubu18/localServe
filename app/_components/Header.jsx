@@ -1,86 +1,158 @@
-// Header.js
-import { Button } from '@/components/ui/button';
-import { signIn, signOut, useSession } from 'next-auth/react';
-import Image from 'next/image';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from "react";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import ThemeToggle from './ThemeToggle';  // Import ThemeToggle
-import Link from 'next/link';
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"; 
+import { Calendar } from "@/components/ui/calendar"; 
+import { Button } from "@/components/ui/button"; 
+import GlobalApi from "@/app/_services/GlobalApi"; 
+import { useSession } from "next-auth/react";
+import moment from "moment";
+import { toast } from "sonner";
 
-function Header() {
+function BookingSection({ children, business }) {
+  const [date, setDate] = useState(new Date());
+  const [timeSlot, setTimeSlot] = useState([]);
+  const [selectedTime, setSelectedTime] = useState();
+  const [bookedSlot, setBookedSlot] = useState([]);
   const { data } = useSession();
 
   useEffect(() => {
-    console.log(data);
-  }, [data]);
+    getTime();
+  }, []);
+
+  useEffect(() => {
+    if (date && business?.id) {
+      console.log("Fetching booked slots for business:", business.id, "on date:", moment(date).format("DD-MMM-yyyy"));
+      fetchBookedSlots();
+    }
+  }, [date, business]);
+
+  const fetchBookedSlots = async () => {
+    try {
+      const resp = await GlobalApi.BusinessBookedSlot(business.id, moment(date).format("DD-MMM-yyyy"));
+      console.log("Fetched booked slots:", resp); // Debugging the response
+      setBookedSlot(resp);
+    } catch (err) {
+      console.error("Error while fetching booked slots:", err);
+      toast.error("Error fetching booked slots.");
+    }
+  };
+
+  const getTime = () => {
+    const timeList = [];
+    for (let i = 10; i <= 12; i++) {
+      timeList.push({ time: i + ":00 AM" });
+      timeList.push({ time: i + ":30 AM" });
+    }
+    for (let i = 1; i <= 6; i++) {
+      timeList.push({ time: i + ":00 PM" });
+      timeList.push({ time: i + ":30 PM" });
+    }
+    setTimeSlot(timeList);
+  };
+
+  const saveBooking = async () => {
+    if (selectedTime && date && business?.id && data?.user?.email && data?.user?.name) {
+      console.log("Booking input data:", {
+        businessId: business.id,
+        date: moment(date).format("DD-MMM-yyyy"),
+        time: selectedTime,
+        userName: data.user.name,
+        userEmail: data.user.email,
+      });
+
+      try {
+        const resp = await GlobalApi.createBooking(
+          business.id,
+          moment(date).format("DD-MMM-yyyy"),
+          selectedTime,
+          data.user.name,
+          data.user.email
+        );
+        console.log("Booking response:", resp); // Debugging response
+        if (resp) {
+          setDate(new Date());
+          setSelectedTime("");
+          toast.success("Service booked successfully!");
+        }
+      } catch (err) {
+        toast.error("Error while creating booking");
+        console.error("Error while booking:", err);
+      }
+    } else {
+      toast.error("Please select a valid date and time.");
+    }
+  };
+
+  const isSlotBooked = (time) => {
+    return bookedSlot.some((item) => item.time === time);
+  };
 
   return (
-    <div className='p-5 flex justify-between items-center bg-white dark:bg-gray-900 shadow-lg'>
-      <div className='flex items-center gap-8'>
-        {/* Logo */}
-        <Image src='/Service-modified.png' alt='Service' width={50} height={50} />
-        
-        {/* Navigation Links */}
-        <div className='md:flex items-center gap-10 hidden'>
-          <h2 className='hover:scale-110 hover:text-blue-600 cursor-pointer text-lg transition-transform duration-200 ease-in-out relative group dark:text-gray-100'>
-            Home
-            <span className='absolute left-0 bottom-0 h-0.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-300'></span>
-          </h2>
-          <h2 className='hover:scale-110 hover:text-blue-600 cursor-pointer text-lg transition-transform duration-200 ease-in-out relative group dark:text-gray-100'>
-            Services
-            <span className='absolute left-0 bottom-0 h-0.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-300'></span>
-          </h2>
-          <h2 className='hover:scale-110 hover:text-blue-600 cursor-pointer text-lg transition-transform duration-200 ease-in-out relative group dark:text-gray-100'>
-            About Us
-            <span className='absolute left-0 bottom-0 h-0.5 w-0 bg-blue-600 group-hover:w-full transition-all duration-300'></span>
-          </h2>
-        </div>
-      </div>
-      
-      {/* Theme Toggle Button */}
-      <ThemeToggle />
-
-      {/* Get Started Button */}
-      <div className='ml-auto'>
-        {data?.user ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Image
-                src={data.user.image || '/default-profile.png'}
-                alt='user'
-                width={40}
-                height={40}
-                className='rounded-full cursor-pointer'
-              />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                <Link href={'/mybooking'}>My Booking</Link>
-                
-                </DropdownMenuItem>
-              <DropdownMenuItem onClick={()=>signOut()}>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <Button
-            onClick={() => signIn('descope')}
-            className='px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-lg transition-all duration-200 transform hover:bg-blue-700 hover:scale-105 focus:ring-4 focus:ring-blue-300 active:scale-95'
-          >
-            Login / Sign Up
-          </Button>
-        )}
-      </div>
+    <div>
+      <Sheet>
+        <SheetTrigger asChild>{children}</SheetTrigger>
+        <SheetContent className="overflow-auto">
+          <SheetHeader>
+            <SheetTitle>Book a Service</SheetTitle>
+            <SheetDescription>
+              Select Date and Time slot to book a service
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex flex-col gap-5 items-baseline">
+            <h2 className="mt-5 font-bold">Select Date</h2>
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={setDate}
+              className="rounded-md border"
+            />
+          </div>
+          <h2 className="my-5 font-bold">Select Time Slot</h2>
+          <div className="grid grid-cols-3 gap-3">
+            {timeSlot.map((item, index) => (
+              <Button
+                key={index}
+                disabled={isSlotBooked(item.time)}
+                variant="outline"
+                className={`border rounded-full p-2 px-3 hover:bg-primary hover:text-white ${
+                  selectedTime === item.time && "bg-primary text-white"
+                }`}
+                onClick={() => setSelectedTime(item.time)}
+              >
+                {item.time}
+              </Button>
+            ))}
+          </div>
+          <SheetFooter className="mt-5">
+            <SheetClose asChild>
+              <div className="flex gap-5">
+                <Button variant="destructive">Cancel</Button>
+                <Button
+                  disabled={!(selectedTime && date)}
+                  onClick={saveBooking}
+                  className={`rounded-lg px-6 py-3 font-semibold text-white ${
+                    !(selectedTime && date)
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700"
+                  }`}
+                >
+                  Book
+                </Button>
+              </div>
+            </SheetClose>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
 
-export default Header;
+export default BookingSection;
